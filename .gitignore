@@ -3,5 +3,8 @@ venv/
 ENV/
 env/
 
+# not whole folder, just the model file
+sentiment_model_final/
+
 # Local environment variables
 .env 

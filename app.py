@@ -2,47 +2,54 @@ import streamlit as st
 import pandas as pd
 import plotly.figure_factory as ff
 import plotly.express as px
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+import os
+import gdown
 
 # Set page configuration - MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_config(page_title="Indian News Sentiment", page_icon="📰", layout="wide", initial_sidebar_state="expanded")
 
-# --- CUSTOM CSS FOR UI ENHANCEMENT ---
+# ==========================================
+# GOOGLE DRIVE MODEL DOWNLOAD LOGIC
+# ==========================================
+folder_id = '1YUb3XqpMUzD_xUEVis_Qs3Wd0tLtH7w-'
+url = f'https://drive.google.com/drive/folders/{folder_id}?usp=sharing'
+model_dir = "./sentiment_model_final"
+
+@st.cache_resource
+def load_model():
+    # Agar model folder nahi milta, toh download shuru karo
+    if not os.path.exists(model_dir):
+        with st.spinner("🚀 Downloading DistilBERT model from Google Drive... Please wait, this happens only once."):
+            gdown.download_folder(url, output=model_dir, quiet=False, use_cookies=False)
+    
+    # Model load logic
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = AutoModelForSequenceClassification.from_pretrained(model_dir)
+    return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+
+# Initialize the classifier
+with st.spinner("⏳ Warming up the DistilBERT engine..."):
+    classifier = load_model()
+
+# ==========================================
+# CUSTOM CSS FOR UI ENHANCEMENT
+# ==========================================
 st.markdown("""
 <style>
-    /* Gradient text for main titles */
     .gradient-text {
         background: linear-gradient(45deg, #4CAF50, #2196F3);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 3.5em; /* Slightly larger for impact */
+        font-size: 3.5em;
         font-weight: 800;
         text-align: center;
         padding-bottom: 10px;
         margin-bottom: 0px;
     }
-
-    /* FIX: This makes sure emojis keep their color and don't disappear */
-    .emoji-span {
-        -webkit-text-fill-color: initial;
-        text-shadow: none;
-    }
-
-    /* FIX: This makes the text visible when you highlight it with a mouse */
-    ::selection {
-        background: #2196F3 !important;
-        color: white !important;
-        -webkit-text-fill-color: white !important;
-    }
-
-    .center-text {
-        text-align: center;
-        color: #A0A0A0;
-        font-size: 1.2em;
-        margin-top: -10px;
-        margin-bottom: 30px;
-    }
-
+    .emoji-span { -webkit-text-fill-color: initial; text-shadow: none; }
+    ::selection { background: #2196F3 !important; color: white !important; }
+    .center-text { text-align: center; color: #A0A0A0; font-size: 1.2em; margin-top: -10px; margin-bottom: 30px; }
     div[data-testid="metric-container"] {
         background-color: rgba(255, 255, 255, 0.05);
         border-radius: 10px;
@@ -52,16 +59,10 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-# Cache the model so it doesn't reload on every interaction
-@st.cache_resource
-def load_model():
-    return pipeline("sentiment-analysis", model="./sentiment_model_final", tokenizer="./sentiment_model_final")
 
-with st.spinner("⏳ Warming up the DistilBERT engine..."):
-    classifier = load_model()
-
-# --- SIDEBAR NAVIGATION ---
-# st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2965/2965306.png", width=100) # Placeholder logo
+# ==========================================
+# SIDEBAR NAVIGATION
+# ==========================================
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.radio("Select a Module:", [
     "🏠 Home Overview", 
