@@ -1,0 +1,4 @@
+plotly
+streamlit
+transformers
+torch
