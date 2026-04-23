@@ -185,34 +185,77 @@ elif page == "⚡ Real-time Analyzer":
                 st.warning("⚠️ Please enter a headline first.")
 
     # --- BULK ANALYSIS ---
+# --- BULK ANALYSIS ---
     with tab_bulk:
-        st.markdown("Paste multiple headlines below (**one per line**) to analyze them all at once.")
-        bulk_text = st.text_area("📝 List of Headlines:", placeholder="Headline 1\nHeadline 2\nHeadline 3...", height=200, key="bulk_input")
+        st.markdown("### 📥 Bulk Import via File or Text")
+        
+        # Option 1: File Uploader
+        uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx", "xls"])
+        
+        # Option 2: Text Area (as a fallback)
+        bulk_text = st.text_area("OR Paste headlines below (one per line):", 
+                                placeholder="Headline 1\nHeadline 2...", height=150, key="bulk_input")
 
         if st.button("🚀 Run Bulk Analysis", type="primary"):
-            lines = [line.strip() for line in bulk_text.split('\n') if line.strip()]
+            lines = []
             
+            # Logic to handle File Upload
+            if uploaded_file is not None:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        df_input = pd.read_csv(uploaded_file)
+                    else:
+                        df_input = pd.read_excel(uploaded_file)
+                    
+                    # Try to find a column with 'headline' or 'text' in the name, else take the first column
+                    target_col = None
+                    for col in df_input.columns:
+                        if any(keyword in col.lower() for keyword in ['headline', 'text', 'news', 'title']):
+                            target_col = col
+                            break
+                    
+                    if target_col is None:
+                        target_col = df_input.columns[0]
+                        st.info(f"💡 No 'headline' column found. Analyzing the first column: **{target_col}**")
+                    
+                    lines = df_input[target_col].dropna().astype(str).tolist()
+                except Exception as e:
+                    st.error(f"❌ Error reading file: {e}")
+            
+            # Logic to handle Text Area if no file is uploaded
+            elif bulk_text.strip():
+                lines = [line.strip() for line in bulk_text.split('\n') if line.strip()]
+
+            # Process the lines
             if lines:
                 results_list = []
                 with st.spinner(f"🧠 Processing {len(lines)} headlines..."):
-                    # Model inference on all lines
+                    # Batch processing for efficiency
                     predictions = classifier(lines)
                     
                     for i, res in enumerate(predictions):
                         is_pos = res['label'] == "LABEL_1"
                         results_list.append({
-                            "S.No": i + 1,
                             "Headline": lines[i],
                             "Sentiment": "Positive 🟢" if is_pos else "Negative 🔴",
-                            "Confidence": f"{res['score'] * 100:.2f}%"
+                            "Confidence": round(res['score'] * 100, 2)
                         })
                 
-                # Show results in a nice table
+                # Show results
                 df_results = pd.DataFrame(results_list)
                 st.markdown("### 📊 Bulk Results")
-                st.dataframe(df_results, use_container_width=True, hide_index=True)
+                st.dataframe(df_results, use_container_width=True)
                 
-                # Quick summary metrics
+                # Download Button
+                csv_output = df_results.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Analysis as CSV",
+                    data=csv_output,
+                    file_name="news_sentiment_analysis.csv",
+                    mime="text/csv",
+                )
+
+                # Summary Metrics
                 pos_count = sum(1 for r in results_list if "Positive" in r["Sentiment"])
                 neg_count = len(lines) - pos_count
                 
@@ -221,8 +264,7 @@ elif page == "⚡ Real-time Analyzer":
                 c2.metric("Positives ✅", pos_count)
                 c3.metric("Negatives ❌", neg_count)
             else:
-                st.warning("⚠️ Please enter at least one headline.")
-
+                st.warning("⚠️ Please upload a file or enter headlines manually.")
 # ==========================================
 # PAGE 2: PERFORMANCE METRICS
 # ==========================================
