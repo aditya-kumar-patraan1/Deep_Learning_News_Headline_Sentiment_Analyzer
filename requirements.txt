@@ -1,5 +1,7 @@
-plotly
 streamlit
+pandas
+plotly
 transformers
 torch
 gdown
+openpyxl
