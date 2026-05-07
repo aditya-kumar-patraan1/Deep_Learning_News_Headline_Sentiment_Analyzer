@@ -86,46 +86,89 @@ if page == "🏠 Home Overview":
     st.write("""DistilBERT is a deep learning-based natural language processing (NLP) model derived from BERT using knowledge distillation. It is used for text classification tasks such as sentiment analysis, and it retains most of BERT’s performance while being smaller, faster, and more efficient.""")
     
     st.markdown("---")
+    st.markdown("<h3>Project Methodology – DistilBERT Sentiment Analysis</h3>",unsafe_allow_html=True)
 
-    st.subheader("⚙️ The Deep Learning Workflow")
-    st.write("How this model was trained and how it processes your input today:")
-
-    with st.expander("📊 1. Data Engineering & Pre-processing"):
+    with st.expander("📊 1. Data Collection"):
         st.write("""
-        Raw news headlines from the *Times of India* were cleaned (removing noise, HTML, and special characters). 
-        The dataset was then split into **Training** and **Validation** sets to ensure the model learns 
-        patterns rather than just memorizing lines.
+        • Dataset used: **Kaggle Indian Sentiment Dataset**
+
+        • The dataset contains Indian news headlines along with sentiment probability scores 
+        such as Positive, Negative, and Neutral.
         """)
 
-    with st.expander("✂️ 2. Tokenization & Attention Masking"):
+    with st.expander("🧹 2. Data Preprocessing"):
         st.write("""
-        DistilBERT cannot read English directly. The **Tokenizer** breaks text into *WordPieces* (sub-words) and maps them to unique numerical IDs. An **Attention Mask** is generated 
-        simultaneously to tell the model which parts of the padding to ignore during computation.
-        """)
-        
+        ▪ **Feature Selection:**  
+        Extracting only the required columns such as:
+        - Headline
+        - Positive
+        - Negative
+        - Neutral
 
-    with st.expander("🧠 3. Transfer Learning (Fine-Tuning)"):
-        st.write("""
-        Instead of training from scratch, we took a pre-trained DistilBERT model (which already 
-        understands English grammar) and 'fine-tuned' its weights specifically on Indian financial 
-        and political news. This allows the model to understand local context like *'Sensex'*, 
-        *'Nifty'*, or *'Lathi-charge'*.
+        ▪ **Target Label Creation:**  
+        Generating sentiment labels by selecting the sentiment with the highest probability 
+        score for each record.
+        - Positive = 1
+        - Negative = 0
+
+        ▪ **Binary Filtering:**  
+        Removing all rows labelled as *Neutral* to convert the problem into a binary 
+        sentiment classification task.
+
+        ▪ **Text Standardization:**  
+        Renaming the `Headline` column to `text` to match the standard input format expected 
+        by Hugging Face Transformers datasets.
         """)
 
-    with st.expander("📡 4. Multi-Head Self-Attention"):
+    with st.expander("✂️ 3. Tokenization"):
         st.write("""
-        Inside the 6 Transformer layers, the model uses **Self-Attention** to calculate the 
-        relationship between words. For example, in the phrase *"Bank stocks fall"*, it learns 
-        that 'fall' refers to 'stocks' and not the 'bank' building itself.
-        """)
-        
+        ▪ **Subword Tokenization:**  
+        Using the tokenizer of `distilbert-base-uncased` to split text into smaller subword 
+        tokens, helping the model understand unknown or rare words effectively.
 
-    with st.expander("📈 5. Softmax Classification"):
-        st.write("""
-        The final hidden state of the `[CLS]` token is passed through a Linear Layer. A 
-        **Softmax** function then converts raw scores (logits) into a probability distribution 
-        between 0 and 1, giving us the final **Positive** or **Negative** label.
+        ▪ **Sequence Padding:**  
+        Applying `padding="max_length"` to ensure all input sequences have equal length for 
+        efficient batch processing.
+
+        ▪ **Sequence Truncation:**  
+        Applying `truncation=True` to remove excessively long headlines that exceed the 
+        model’s maximum token limit.
+
+        ▪ **Numerical Encoding:**  
+        Converting tokens into numerical input IDs and attention masks before feeding them 
+        into the model.
         """)
+
+    with st.expander("🧠 4. Model Development"):
+        st.write("""
+        ▪ The pre-trained transformer model `distilbert-base-uncased` is loaded using the 
+        Transformers library.
+
+        ▪ The model is fine-tuned on the processed Indian news sentiment dataset for binary 
+        classification.
+
+        ▪ During training, the model learns patterns and contextual relationships in 
+        headlines to classify sentiments as:
+        - Positive
+        - Negative
+
+        ▪ The training process includes:
+        - forward propagation
+        - loss calculation
+        - backpropagation
+        - parameter optimization
+        """)
+
+    with st.expander("📈 5. Model Evaluation"):
+        st.write("""
+        ▪ The trained model is evaluated using:
+        - Validation Loss
+        - Accuracy Score
+
+        ▪ Validation metrics help measure how well the model performs on unseen data and 
+        detect overfitting.
+        """)
+   
 elif page == "⚡ Real-time Analyzer":
     st.title("⚡ Real-time Inference Engine")
     
