@@ -6,35 +6,25 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 import os
 import gdown
 
-# Set page configuration - MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_config(page_title="Indian News Sentiment", page_icon="📰", layout="wide", initial_sidebar_state="expanded")
 
-# ==========================================
-# GOOGLE DRIVE MODEL DOWNLOAD LOGIC
-# ==========================================
 folder_id = '1YUb3XqpMUzD_xUEVis_Qs3Wd0tLtH7w-'
 url = f'https://drive.google.com/drive/folders/{folder_id}?usp=sharing'
 model_dir = "./sentiment_model_final"
 
 @st.cache_resource
 def load_model():
-    # Agar model folder nahi milta, toh download shuru karo
     if not os.path.exists(model_dir):
         with st.spinner("🚀 Downloading DistilBERT model from Google Drive... Please wait, this happens only once."):
             gdown.download_folder(url, output=model_dir, quiet=False, use_cookies=False)
     
-    # Model load logic
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir)
     return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
-# Initialize the classifier
 with st.spinner("⏳ Warming up the DistilBERT engine..."):
     classifier = load_model()
 
-# ==========================================
-# CUSTOM CSS FOR UI ENHANCEMENT
-# ==========================================
 st.markdown("""
 <style>
     .gradient-text {
@@ -60,9 +50,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# SIDEBAR NAVIGATION
-# ==========================================
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.radio("Select a Module:", [
     "🏠 Home Overview", 
@@ -76,11 +63,6 @@ st.sidebar.markdown("---")
 st.sidebar.write("**📌 Project Overview:**")
 st.sidebar.write("Fine-tuned DistilBERT on 50,000+ *Times of India* headlines for precise financial & political sentiment classification.")
 st.sidebar.markdown("---")
-# st.sidebar.caption("Made with ❤️ & Streamlit")
-
-# ==========================================
-# PAGE 0: HOME / LANDING PAGE
-# ==========================================
 if page == "🏠 Home Overview":
     st.markdown("""
         <div class='gradient-text'>
@@ -92,7 +74,6 @@ if page == "🏠 Home Overview":
     
     st.markdown("---")
     
-    # Hero Section Stats (Keep these as they are great for high-level info)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(label="📚 Dataset Size", value="50,000+", delta="Headlines")
     col2.metric(label="🤖 Architecture", value="DistilBERT", delta="Transformer")
@@ -101,13 +82,11 @@ if page == "🏠 Home Overview":
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- NEW SECTION: DEFINITION ---
     st.subheader("🤖 What is DistilBERT?")
     st.write("""DistilBERT is a deep learning-based natural language processing (NLP) model derived from BERT using knowledge distillation. It is used for text classification tasks such as sentiment analysis, and it retains most of BERT’s performance while being smaller, faster, and more efficient.""")
     
     st.markdown("---")
 
-    # --- UPDATED SECTION: STEPS ---
     st.subheader("⚙️ The Deep Learning Workflow")
     st.write("How this model was trained and how it processes your input today:")
 
@@ -147,16 +126,11 @@ if page == "🏠 Home Overview":
         **Softmax** function then converts raw scores (logits) into a probability distribution 
         between 0 and 1, giving us the final **Positive** or **Negative** label.
         """)
-# ==========================================
-# PAGE 1: SENTIMENT ANALYZER
-# ==========================================
 elif page == "⚡ Real-time Analyzer":
     st.title("⚡ Real-time Inference Engine")
     
-    # Tabs for Single or Bulk analysis
     tab_single, tab_bulk = st.tabs(["🎯 Single Analysis", "📚 Bulk Analysis"])
 
-    # --- SINGLE ANALYSIS ---
     with tab_single:
         st.markdown("Enter a news headline below to determine if the tone is **Positive** or **Negative**.")
         headline = st.text_area("✍️ News Headline:", placeholder="e.g., India's tech sector sees massive growth in Q3...", key="single_input")
@@ -184,22 +158,17 @@ elif page == "⚡ Real-time Analyzer":
             else:
                 st.warning("⚠️ Please enter a headline first.")
 
-    # --- BULK ANALYSIS ---
-# --- BULK ANALYSIS ---
     with tab_bulk:
         st.markdown("### 📥 Bulk Import via File or Text")
         
-        # Option 1: File Uploader
         uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx", "xls"])
         
-        # Option 2: Text Area (as a fallback)
         bulk_text = st.text_area("OR Paste headlines below (one per line):", 
                                 placeholder="Headline 1\nHeadline 2...", height=150, key="bulk_input")
 
         if st.button("🚀 Run Bulk Analysis", type="primary"):
             lines = []
             
-            # Logic to handle File Upload
             if uploaded_file is not None:
                 try:
                     if uploaded_file.name.endswith('.csv'):
@@ -207,7 +176,6 @@ elif page == "⚡ Real-time Analyzer":
                     else:
                         df_input = pd.read_excel(uploaded_file)
                     
-                    # Try to find a column with 'headline' or 'text' in the name, else take the first column
                     target_col = None
                     for col in df_input.columns:
                         if any(keyword in col.lower() for keyword in ['headline', 'text', 'news', 'title']):
@@ -222,15 +190,12 @@ elif page == "⚡ Real-time Analyzer":
                 except Exception as e:
                     st.error(f"❌ Error reading file: {e}")
             
-            # Logic to handle Text Area if no file is uploaded
             elif bulk_text.strip():
                 lines = [line.strip() for line in bulk_text.split('\n') if line.strip()]
 
-            # Process the lines
             if lines:
                 results_list = []
                 with st.spinner(f"🧠 Processing {len(lines)} headlines..."):
-                    # Batch processing for efficiency
                     predictions = classifier(lines)
                     
                     for i, res in enumerate(predictions):
@@ -241,12 +206,10 @@ elif page == "⚡ Real-time Analyzer":
                             "Confidence": round(res['score'] * 100, 2)
                         })
                 
-                # Show results
                 df_results = pd.DataFrame(results_list)
                 st.markdown("### 📊 Bulk Results")
                 st.dataframe(df_results, use_container_width=True)
                 
-                # Download Button
                 csv_output = df_results.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="📥 Download Analysis as CSV",
@@ -255,7 +218,6 @@ elif page == "⚡ Real-time Analyzer":
                     mime="text/csv",
                 )
 
-                # Summary Metrics
                 pos_count = sum(1 for r in results_list if "Positive" in r["Sentiment"])
                 neg_count = len(lines) - pos_count
                 
@@ -265,9 +227,6 @@ elif page == "⚡ Real-time Analyzer":
                 c3.metric("Negatives ❌", neg_count)
             else:
                 st.warning("⚠️ Please upload a file or enter headlines manually.")
-# ==========================================
-# PAGE 2: PERFORMANCE METRICS
-# ==========================================
 elif page == "🎯 Model Metrics":
     st.title("🎯 Model Performance Metrics")
     st.write("Evaluation based on the unseen validation split yielding **95.16% overall accuracy**. 🔥")
@@ -348,9 +307,6 @@ elif page == "🎯 Model Metrics":
         st.info("✅ **Observation:** Accuracy plateaued at 95.15% while Validation Loss slightly increased in Epoch 2. This indicates a single epoch was sufficient!")
 
 
-# ==========================================
-# PAGE 3: KEYWORD ANALYSIS
-# ==========================================
 elif page == "📈 Keyword Insights":
     st.title("📈 Model Keyword Insights")
     st.markdown("What is the AI actually paying attention to? Here are the most frequent contextual keywords driving **Positive** and **Negative** sentiment across the 50,000+ dataset.")
@@ -389,10 +345,6 @@ elif page == "📈 Keyword Insights":
         
     st.info("💡 **Key Insight:** Notice how financial terms heavily dominate the sentiment. Words like 'growth' and 'crash' carry massive weight in the model's contextual embeddings for Indian News.")
 
-
-# ==========================================
-# PAGE 4: HOW IT WORKS
-# ==========================================
 elif page == "🧠 Architecture Deep Dive":
     st.title("🧠 The Deep Learning Process")
     
